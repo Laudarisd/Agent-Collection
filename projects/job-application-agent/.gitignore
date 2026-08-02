@@ -1,0 +1,23 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+data/applications.sqlite3
+outputs/
+logs/*.log
+models/*.gguf
+
+# Reference documents contain personal information. Keep only folder guides.
+data/ai_resume/*
+!data/ai_resume/README.md
+data/ml_resume/*
+!data/ml_resume/README.md
+data/data_science_resume/*
+!data/data_science_resume/README.md
+data/postdoctoral_resume/*
+!data/postdoctoral_resume/README.md
+data/cover_letters/industry/*
+!data/cover_letters/industry/README.md
+data/cover_letters/postdoctoral/*
+!data/cover_letters/postdoctoral/README.md

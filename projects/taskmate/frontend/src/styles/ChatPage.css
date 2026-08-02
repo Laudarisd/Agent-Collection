@@ -1,0 +1,130 @@
+/* Chat page styles: 3-panel workspace, tool panel, and responsive behavior. */
+.chat-workspace {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 320px;
+  gap: 1rem;
+  height: calc(100vh - 290px);
+  min-height: calc(100vh - 290px);
+}
+
+.chat-workspace--no-tools {
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+
+.panel-column {
+  min-height: 100%;
+  min-width: 0;
+}
+
+.panel-column--chat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-height: 0;
+}
+
+.panel-column--history .history-panel {
+  height: 100%;
+}
+
+.panel-column--tools {
+  height: 100%;
+}
+
+.chat-feed {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.chat-notice {
+  border: 1px solid rgba(251, 133, 0, 0.35);
+  background: rgba(251, 133, 0, 0.12);
+  color: #7a4700;
+  border-radius: 12px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.chat-feed .response-panel {
+  height: 100%;
+  min-height: 300px;
+}
+
+.chat-input-dock {
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+}
+
+.tools-panel {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(10, 15, 20, 0.08);
+  border-radius: 16px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+}
+
+.tools-panel h3 {
+  font-size: 1rem;
+}
+
+.tools-panel p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.tool-card {
+  background: rgba(10, 15, 20, 0.03);
+  border: 1px solid rgba(10, 15, 20, 0.08);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+.tool-card strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.admin-list {
+  margin: 0.4rem 0 0.8rem;
+  padding-left: 1rem;
+}
+
+.admin-list li {
+  margin-bottom: 0.25rem;
+}
+
+.login-required-page {
+  margin-top: 0.5rem;
+  max-width: 620px;
+}
+
+.login-required-page .primary-button {
+  display: inline-block;
+  margin-top: 0.9rem;
+}
+
+@media (max-width: 980px) {
+  .chat-workspace,
+  .chat-workspace--no-tools {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
+  }
+
+  .panel-column--history {
+    order: 2;
+  }
+
+  .panel-column--chat {
+    order: 1;
+  }
+
+  .panel-column--tools {
+    order: 3;
+  }
+}

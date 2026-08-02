@@ -1,0 +1,2 @@
+"""Local job application agent."""
+

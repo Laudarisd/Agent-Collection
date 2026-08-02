@@ -1,0 +1,5 @@
+/* Contact page scoped styles. */
+.contact-page p {
+  line-height: 1.6;
+  color: var(--text-muted);
+}

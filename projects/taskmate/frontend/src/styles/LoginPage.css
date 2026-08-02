@@ -1,0 +1,112 @@
+/* Login/Register page styles and animated preview panel. */
+.auth-page {
+  max-width: 520px;
+}
+
+.auth-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.2rem;
+  align-items: stretch;
+}
+
+.auth-switch {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.auth-form input {
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid rgba(10, 15, 20, 0.18);
+}
+
+.auth-preview-panel {
+  display: flex;
+  align-items: center;
+}
+
+.preview-chat {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.preview-bubble {
+  max-width: 92%;
+  padding: 0.8rem 0.95rem;
+  border-radius: 12px;
+  line-height: 1.5;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: chatCycle 16s ease-in-out infinite;
+}
+
+.preview-bubble--user {
+  margin-left: auto;
+  background: rgba(0, 180, 216, 0.16);
+  border: 1px solid rgba(0, 180, 216, 0.32);
+}
+
+.preview-bubble--assistant {
+  margin-right: auto;
+  background: rgba(10, 15, 20, 0.06);
+  border: 1px solid rgba(10, 15, 20, 0.1);
+}
+
+.preview-step-1 {
+  animation-delay: 0s;
+}
+
+.preview-step-2 {
+  animation-delay: 4s;
+}
+
+.preview-step-3 {
+  animation-delay: 8s;
+}
+
+.preview-step-4 {
+  animation-delay: 12s;
+}
+
+@keyframes chatCycle {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  8% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  16% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (max-width: 980px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+  }
+}

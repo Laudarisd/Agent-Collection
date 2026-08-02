@@ -1,0 +1,68 @@
+countries:
+  industry: [Australia]
+  research: [New Zealand, Canada, United States]
+
+roles:
+  industry:
+    - AI Engineer
+    - Artificial Intelligence Engineer
+    - Machine Learning Engineer
+    - Applied Machine Learning Engineer
+    - Applied ML Engineer
+    - Computer Vision Engineer
+    - Data Scientist
+    - Applied Data Scientist
+    - Research Engineer
+    - Scientific Machine Learning Engineer
+  research:
+    - Postdoctoral Researcher
+    - Postdoctoral Fellow
+    - Research Fellow
+    - Research Associate
+    - Research Scientist
+    - Research Engineer
+
+research_keywords:
+  - artificial intelligence
+  - machine learning
+  - scientific machine learning
+  - physics-informed machine learning
+  - granular materials
+  - granular flow
+  - discrete element method
+  - liggghts
+  - digital twins
+  - reinforcement learning
+  - echo state networks
+  - reservoir computing
+  - time-series forecasting
+  - computer vision
+  - image processing
+  - ocr
+  - remote sensing
+  - geospatial ai
+  - surrogate modelling
+
+profile_directories:
+  ai_resume: data/ai_resume
+  ml_resume: data/ml_resume
+  data_science_resume: data/data_science_resume
+  postdoctoral_resume: data/postdoctoral_resume
+
+cover_letter_directories:
+  industry: data/cover_letters/industry
+  research: data/cover_letters/postdoctoral
+
+matching_weights:
+  role_alignment: 0.25
+  technical_skills: 0.25
+  domain_alignment: 0.20
+  education: 0.10
+  experience: 0.10
+  location: 0.10
+
+approval:
+  apply_score: 75
+  review_score: 50
+  require_human_submission_approval: true
+

@@ -1,0 +1,105 @@
+/* Prompt composer styles: textarea, footer actions, and compact mode. */
+.prompt-shell {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  border: 1px solid rgba(10, 15, 20, 0.08);
+  box-shadow: 0 18px 40px rgba(10, 15, 20, 0.08);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.prompt-shell--compact {
+  padding: 0.8rem;
+  border-radius: 14px;
+}
+
+.prompt-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.prompt-header h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.35rem;
+}
+
+.prompt-header p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  max-width: 320px;
+}
+
+.shortcut-group {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.3rem 0.5rem;
+  align-content: start;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.prompt-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.prompt-form textarea {
+  border-radius: 18px;
+  border: 1px solid rgba(10, 15, 20, 0.12);
+  padding: 1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 120px;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.prompt-shell--compact .prompt-form textarea {
+  min-height: 72px;
+  max-height: 180px;
+}
+
+.prompt-form textarea:focus {
+  outline: none;
+  border-color: rgba(0, 180, 216, 0.5);
+  box-shadow: 0 0 0 4px rgba(0, 180, 216, 0.15);
+}
+
+.prompt-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.prompt-shell--compact .prompt-footer {
+  margin-top: 0.2rem;
+}
+
+.prompt-tools,
+.prompt-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .prompt-header {
+    flex-direction: column;
+  }
+
+  .shortcut-group {
+    grid-template-columns: repeat(4, auto);
+  }
+}

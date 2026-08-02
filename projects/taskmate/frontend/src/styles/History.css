@@ -1,0 +1,152 @@
+/* Thread sidebar styles: cards, actions menu, and scroll behavior. */
+.history-panel {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  border: 1px solid rgba(10, 15, 20, 0.08);
+  box-shadow: 0 14px 28px rgba(10, 15, 20, 0.08);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.history-header h3 {
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.history-list {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  gap: 0.6rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.history-card {
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: rgba(10, 15, 20, 0.02);
+  border: 1px solid rgba(10, 15, 20, 0.08);
+  display: grid;
+  gap: 0.3rem;
+  cursor: pointer;
+  width: 100%;
+  height: 96px;
+  box-sizing: border-box;
+  overflow: visible;
+  position: relative;
+}
+
+.history-card--active {
+  border-color: rgba(0, 180, 216, 0.6);
+  box-shadow: 0 8px 16px rgba(0, 180, 216, 0.16);
+  background: rgba(0, 180, 216, 0.09);
+}
+
+.history-card h4 {
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.history-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.history-card p {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-new-button {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+}
+
+.history-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.history-delete-all-button {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  color: #a11930;
+}
+
+.thread-menu {
+  position: relative;
+  z-index: 6;
+}
+
+.thread-menu-trigger {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.thread-menu-trigger:hover {
+  background: rgba(10, 15, 20, 0.08);
+}
+
+.thread-menu-list {
+  position: absolute;
+  right: 0;
+  top: 26px;
+  min-width: 120px;
+  background: #fff;
+  border: 1px solid rgba(10, 15, 20, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 12px 24px rgba(10, 15, 20, 0.14);
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  z-index: 4;
+}
+
+.thread-menu-list button {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.thread-menu-list button:hover {
+  background: rgba(10, 15, 20, 0.06);
+}
+
+.thread-menu-list .danger {
+  color: #a11930;
+}

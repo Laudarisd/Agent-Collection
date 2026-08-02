@@ -1,0 +1,6 @@
+source_repository	commit	github_url	destination
+agent_to_apply_job	4e783ce9b5b56f45393b4e84d850aab104dcdaec	https://github.com/Laudarisd/agent_to_apply_job	projects/job-application-agent
+TaskMate	be80d6e4096e181843d414ae83e87733469d76e6	https://github.com/Laudarisd/TaskMate	projects/taskmate
+ConnecXia	9041a046743e658bcba5f6c8509e2bfde9f60232	https://github.com/Laudarisd/ConnecXia	projects/connectxia
+YTubeSaver	5e4afc8fd76c281373d959c19214e3fda5a6190a	https://github.com/Laudarisd/YTubeSaver	projects/youtube-saver
+Web-Development	d48be819555ca4f8d9bfe12c480a6369c110cb3e	https://github.com/Laudarisd/Web-Development	projects/web-development
