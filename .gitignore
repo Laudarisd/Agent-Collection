@@ -31,3 +31,7 @@ runs/
 *.sqlite3
 checkpoints/
 wandb/
+
+# Local-only files
+Thumbs.db
+*.pyc

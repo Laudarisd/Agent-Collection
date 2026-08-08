@@ -1,0 +1,46 @@
+# Every local project managed by this agent lives directly inside this folder.
+repo_dir: "./repo"
+
+# Optional: GitHub repositories that should always exist locally.
+# Missing repositories in this list are cloned automatically.
+repositories: []
+
+github:
+  # When a local repository/folder has no GitHub remote, create one automatically.
+  create_remote_if_missing: true
+
+  # A normal folder inside repo/ can be initialized automatically with Git.
+  initialize_plain_folders: true
+
+  # New GitHub repositories are private by default.
+  # Allowed values: private, public
+  default_visibility: "private"
+
+  # Git remote name used by the agent.
+  remote_name: "origin"
+
+  # GitHub API timeout.
+  api_timeout_seconds: 30
+
+git:
+  auto_commit: true
+  auto_pull: true
+  auto_merge: true
+  auto_push: true
+
+llm:
+  # GithubAuto and llm_models are expected to be sibling folders:
+  #
+  # projects/
+  # ├── GithubAuto/
+  # └── llm_models/
+  #
+  # If your folders are arranged differently, change only this line.
+  model_path: "../llm_models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
+
+  # llama-cli is already available in your PATH.
+  executable: "llama-cli"
+
+  max_tokens: 80
+  temperature: 0.2
+  timeout_seconds: 180
