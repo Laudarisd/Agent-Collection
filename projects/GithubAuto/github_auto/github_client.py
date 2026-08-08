@@ -2,13 +2,22 @@ from __future__ import annotations
 
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
 
 class GitHubAPIError(RuntimeError):
-    """Raised when the GitHub REST API returns an error."""
+    """Raised when a GitHub REST API operation fails."""
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 @dataclass(frozen=True)
@@ -22,10 +31,10 @@ class RemoteRepository:
 
 class GitHubClient:
     """
-    Minimal GitHub REST API client.
+    Minimal GitHub REST client.
 
-    It is intentionally small and uses Python's standard library so the project
-    does not need a large GitHub SDK.
+    Git operations still use normal Git. This client is only for operations
+    that Git itself cannot do, such as creating/deleting a GitHub repository.
     """
 
     API_ROOT = "https://api.github.com"
@@ -39,88 +48,98 @@ class GitHubClient:
         self.token = (token or "").strip()
         self.owner = (owner or "").strip()
         self.timeout_seconds = timeout_seconds
-        self._authenticated_login: str | None = None
+        self._login: str | None = None
 
     def is_configured(self) -> bool:
-        """Repository creation requires a GitHub token."""
         return bool(self.token)
 
     def authenticated_login(self) -> str:
-        """Return the login associated with GITHUB_TOKEN."""
-        if self._authenticated_login:
-            return self._authenticated_login
+        if self._login:
+            return self._login
 
         data = self._request("GET", "/user")
         login = str(data.get("login", "")).strip()
+
         if not login:
-            raise GitHubAPIError("GitHub did not return an authenticated username.")
-
-        self._authenticated_login = login
-        return login
-
-    def create_or_get_repository(
-        self,
-        name: str,
-        visibility: str,
-    ) -> tuple[RemoteRepository, bool]:
-        """
-        Create a GitHub repository.
-
-        Returns:
-            (repository, created_now)
-
-        If a repository with the same name already exists under the target
-        owner, the existing repository is returned instead of creating a second
-        one.
-        """
-        if not self.is_configured():
             raise GitHubAPIError(
-                "GITHUB_TOKEN is empty. A token is required to create a new "
-                "repository on GitHub."
+                "GitHub did not return an authenticated username."
             )
 
-        authenticated_user = self.authenticated_login()
-        target_owner = self.owner or authenticated_user
-        private = visibility == "private"
-
-        existing = self.get_repository(target_owner, name)
-        if existing is not None:
-            return existing, False
-
-        payload = {
-            "name": name,
-            "private": private,
-            "auto_init": False,
-            "has_issues": True,
-            "has_projects": True,
-            "has_wiki": True,
-        }
-
-        if target_owner == authenticated_user:
-            data = self._request("POST", "/user/repos", payload)
-        else:
-            data = self._request(
-                "POST",
-                f"/orgs/{target_owner}/repos",
-                payload,
-            )
-
-        return self._to_repository(data), True
+        self._login = login
+        return login
 
     def get_repository(
         self,
         owner: str,
         name: str,
     ) -> RemoteRepository | None:
-        """Return a repository when it exists and is accessible."""
+        owner_q = urllib.parse.quote(owner, safe="")
+        name_q = urllib.parse.quote(name, safe="")
+
         try:
-            data = self._request("GET", f"/repos/{owner}/{name}")
+            data = self._request(
+                "GET",
+                f"/repos/{owner_q}/{name_q}",
+            )
         except GitHubAPIError as exc:
-            if "HTTP 404" in str(exc):
+            if exc.status_code == 404:
                 return None
             raise
 
         return self._to_repository(data)
+
+    def create_or_get_repository(
+        self,
+        name: str,
+        visibility: str,
+    ) -> tuple[RemoteRepository, bool]:
+        if not self.is_configured():
+            raise GitHubAPIError(
+                "GITHUB_TOKEN is required to create a GitHub repository."
+            )
+
+        login = self.authenticated_login()
+        target_owner = self.owner or login
+
+        existing = self.get_repository(target_owner, name)
+        if existing:
+            return existing, False
+
+        payload = {
+            "name": name,
+            "private": visibility == "private",
+            "auto_init": False,
+        }
+
+        if target_owner == login:
+            data = self._request("POST", "/user/repos", payload)
+        else:
+            owner_q = urllib.parse.quote(target_owner, safe="")
+            data = self._request(
+                "POST",
+                f"/orgs/{owner_q}/repos",
+                payload,
+            )
+
+        return self._to_repository(data), True
+
+    def delete_repository(
+        self,
+        owner: str,
+        name: str,
+    ) -> None:
+        """Permanently delete a remote GitHub repository."""
+        if not self.is_configured():
+            raise GitHubAPIError(
+                "GITHUB_TOKEN is required to delete a GitHub repository."
+            )
+
+        owner_q = urllib.parse.quote(owner, safe="")
+        name_q = urllib.parse.quote(name, safe="")
+        self._request(
+            "DELETE",
+            f"/repos/{owner_q}/{name_q}",
+        )
 
     def _request(
         self,
@@ -128,7 +147,6 @@ class GitHubClient:
         path: str,
         payload: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Perform one authenticated GitHub REST request."""
         url = f"{self.API_ROOT}{path}"
         body = None
 
@@ -164,11 +182,15 @@ class GitHubClient:
                 message = json.loads(details).get("message", details)
             except json.JSONDecodeError:
                 message = details
+
             raise GitHubAPIError(
-                f"GitHub API HTTP {exc.code}: {message}"
+                f"GitHub API HTTP {exc.code}: {message}",
+                status_code=exc.code,
             ) from exc
         except urllib.error.URLError as exc:
-            raise GitHubAPIError(f"Could not reach GitHub API: {exc.reason}") from exc
+            raise GitHubAPIError(
+                f"Could not reach GitHub API: {exc.reason}"
+            ) from exc
 
         if not raw:
             return {}
@@ -176,11 +198,14 @@ class GitHubClient:
         try:
             return json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise GitHubAPIError("GitHub returned invalid JSON.") from exc
+            raise GitHubAPIError(
+                "GitHub returned invalid JSON."
+            ) from exc
 
     @staticmethod
-    def _to_repository(data: dict[str, Any]) -> RemoteRepository:
-        """Convert GitHub API JSON to the small object used by this project."""
+    def _to_repository(
+        data: dict[str, Any],
+    ) -> RemoteRepository:
         owner_data = data.get("owner") or {}
         return RemoteRepository(
             owner=str(owner_data.get("login", "")),

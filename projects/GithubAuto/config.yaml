@@ -1,46 +1,44 @@
-# Every local project managed by this agent lives directly inside this folder.
+# All managed projects live directly inside this folder.
 repo_dir: "./repo"
 
-# Optional: GitHub repositories that should always exist locally.
-# Missing repositories in this list are cloned automatically.
-repositories: []
-
 github:
-  # When a local repository/folder has no GitHub remote, create one automatically.
-  create_remote_if_missing: true
+  remote_name: "origin"
 
-  # A normal folder inside repo/ can be initialized automatically with Git.
-  initialize_plain_folders: true
-
-  # New GitHub repositories are private by default.
+  # New GitHub repositories created by GithubAuto use this visibility.
   # Allowed values: private, public
   default_visibility: "private"
 
-  # Git remote name used by the agent.
-  remote_name: "origin"
-
-  # GitHub API timeout.
+  # Creating/deleting remote repositories uses the GitHub REST API.
   api_timeout_seconds: 30
 
 git:
-  auto_commit: true
-  auto_pull: true
-  auto_merge: true
-  auto_push: true
+  # Smart Sync recommends rebase for diverged branches by default.
+  # Allowed values: rebase, merge
+  preferred_divergence_strategy: "rebase"
+
+  # Number of commits shown in History.
+  history_limit: 15
 
 llm:
-  # GithubAuto and llm_models are expected to be sibling folders:
+  # GithubAuto and llm_models are sibling folders:
   #
-  # projects/
+  # workspace/
   # ├── GithubAuto/
   # └── llm_models/
-  #
-  # If your folders are arranged differently, change only this line.
   model_path: "../llm_models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
-
-  # llama-cli is already available in your PATH.
   executable: "llama-cli"
 
-  max_tokens: 80
-  temperature: 0.2
+  max_tokens: 48
+  temperature: 0.1
   timeout_seconds: 180
+
+safety:
+  # Destructive operations require typed confirmation.
+  confirm_destructive_actions: true
+
+  # Remote repository deletion is intentionally disabled by default.
+  # Set true only when you intentionally want that menu action enabled.
+  allow_remote_repo_delete: false
+
+  # Hard reset permanently discards local work and is disabled by default.
+  allow_hard_reset: false

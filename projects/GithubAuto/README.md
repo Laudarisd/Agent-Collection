@@ -1,11 +1,20 @@
-# GithubAuto
+# GithubAuto Advanced v4
 
-GithubAuto is a local-first Git/GitHub synchronization agent built around
-normal Git commands plus your local llama.cpp model.
+GithubAuto is an interactive local Git/GitHub manager designed for repositories
+stored under:
 
-## Current local model
+```text
+GithubAuto/repo/
+```
 
-The project is configured to use:
+The major change in v4 is **inspect first, choose second**.
+
+It no longer automatically commits and pushes every repository simply because a
+local file changed.
+
+## Model
+
+The configured local model is:
 
 ```text
 ../llm_models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf
@@ -14,102 +23,21 @@ The project is configured to use:
 Expected layout:
 
 ```text
-projects/
+workspace/
 ├── GithubAuto/
 └── llm_models/
     ├── Qwen3-4B-Instruct-2507-Q4_K_M.gguf
     └── Qwen3-4B-Q4_K_M.gguf
 ```
 
-The Instruct model is used because this agent needs a model that follows a
-small, explicit instruction when writing commit subjects.
+The model is used only to write commit subjects.
 
-## What the agent manages
-
-Put projects directly inside:
-
-```text
-GithubAuto/repo/
-```
-
-The agent handles two kinds of entries.
-
-### Existing Git repository
-
-```text
-repo/MyExistingProject/.git/
-```
-
-The agent checks its remote state, local changes, commits, pulls, merges, and
-pushes according to `config.yaml`.
-
-### New normal folder
-
-```text
-repo/MyNewProject/
-```
-
-When sync mode is used, the agent can:
-
-1. initialize the folder as Git
-2. create branch `main`
-3. protect `.env` through the child repository's `.gitignore`
-4. create the repository on GitHub
-5. add `origin`
-6. ask the local Qwen model for the initial commit message
-7. commit
-8. push and configure upstream tracking
-
-New GitHub repositories are **private by default**.
-
-## Authentication
-
-Existing pull/push operations can continue using Git authentication already
-configured on your Mac.
-
-Automatic remote repository creation uses the GitHub REST API, so place a
-GitHub Personal Access Token in:
-
-```text
-GithubAuto/.env
-```
-
-```text
-GITHUB_TOKEN=your_token_here
-```
-
-Optional organization creation:
-
-```text
-GITHUB_OWNER=
-```
-
-Leave `GITHUB_OWNER` empty to create repositories under the GitHub account
-authenticated by the token.
-
-The token is not stored inside Git remote URLs.
+Git itself decides repository state and performs fetch/pull/rebase/merge/push.
 
 ## Install
 
 ```bash
 python -m pip install -r requirements.txt
-```
-
-You already have `llama-cli` installed.
-
-## First model check
-
-From `GithubAuto/`:
-
-```bash
-ls ../llm_models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf
-```
-
-Then:
-
-```bash
-llama-cli -m "../llm_models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf" \
-  -p "Write one short Git commit subject for adding repository sync."
 ```
 
 ## Run
@@ -118,98 +46,273 @@ llama-cli -m "../llm_models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf" \
 python main.py
 ```
 
-Menu:
+## Main menu
+
+### 1. Scan & compare all repositories
+
+Safe overview.
+
+It runs `git fetch --prune` for configured remotes and shows:
+
+- current branch
+- changed-file count
+- local commits ahead of remote
+- remote commits behind
+- missing/broken remotes
+- diverged branches
+- interrupted merge/rebase operations
+
+It does **not** commit, pull, merge, rebase, or push.
+
+### 2. Smart Sync Assistant
+
+Shows only repositories needing attention.
+
+Examples:
 
 ```text
-1. Check and sync all repositories
-2. Check repository status only
-3. Exit
+Repository                  Files   ↑   ↓   Status
+Agent-Collection                1   0   0   LOCAL CHANGES
+Laudarisd                       0   0   3   REMOTE AHEAD
+Research                        2   1   0   LOCAL AHEAD
+BrokenRepo                      0   0   0   REMOTE ERROR
 ```
 
-Start with option 2.
+The user chooses the repository number and then the action.
 
-## Synchronization rules
+### 3. Repository Manager
 
-After fetch:
+Manual control for one repository:
+
+- fetch
+- fast-forward pull
+- rebase
+- merge
+- push existing commits
+- show changed files/diffs
+- commit selected files
+- commit and push selected files
+- commit all
+- discard tracked-file changes
+- delete a file
+- branch management
+- history/revert/reset
+- stash
+- remote repair/create/replace
+- optional `.gitignore` hygiene
+- local repository deletion
+- remote GitHub repository deletion
+
+## Important: Git cannot push one file
+
+Git pushes commits, not individual files.
+
+Therefore GithubAuto's:
 
 ```text
-Local = Remote
-    -> nothing
-
-Remote ahead only
-    -> fast-forward pull
-
-Local ahead only
-    -> push
-
-Local + Remote both ahead
-    -> normal Git merge
-    -> push if successful
-
-Merge conflict
-    -> abort merge
-    -> report conflicted files
-    -> do not let the LLM rewrite source code automatically
+Commit & push selected file(s)
 ```
 
-## Local changes
+does this:
 
-When automatic commit is enabled:
+```text
+choose changed file(s)
+        ↓
+stage ONLY selected file(s)
+        ↓
+generate one commit message
+        ↓
+commit ONLY selected file(s)
+        ↓
+push that commit
+```
 
-1. secret-like paths are checked first
-2. local changes are summarized
-3. Qwen generates one commit subject
-4. changes are staged
-5. Git creates the commit
+If the current branch already contains older unpushed commits, GithubAuto warns
+that Git would push those older commits too.
 
-The LLM does **not** decide which shell commands to run.
+## Pull choices
 
-## Secret protection
+### Fetch
 
-Every managed child repository is given these `.gitignore` rules when missing:
+```text
+git fetch --prune origin
+```
+
+Downloads remote metadata and commits but does not alter working files.
+
+### Fast-forward pull
+
+```text
+git pull --ff-only
+```
+
+Safest pull mode. It succeeds only when the current branch can move forward
+without creating a merge commit or rebase.
+
+### Rebase
+
+```text
+git rebase @{upstream}
+```
+
+Replays local commits after the newest remote commits. This gives a clean,
+linear history.
+
+GithubAuto requires a clean working tree and automatically aborts a failed
+rebase so it does not leave the repository half-rebased.
+
+### Merge
+
+```text
+git merge @{upstream}
+```
+
+Combines local and remote histories. It may produce a merge commit.
+
+GithubAuto aborts a failed merge and reports conflicts.
+
+## Revert vs reset
+
+### Revert
+
+Recommended for commits that may already be shared:
+
+```text
+git revert <commit>
+```
+
+It creates a new commit that reverses an older commit.
+
+### Soft reset
+
+Moves HEAD backward but leaves changes staged.
+
+### Mixed reset
+
+Moves HEAD backward and leaves changes unstaged.
+
+### Hard reset
+
+Permanently discards work. It is disabled by default:
+
+```yaml
+safety:
+  allow_hard_reset: false
+```
+
+## Branch operations
+
+The Branch Manager supports:
+
+- list local/remote branches
+- create branch
+- create and switch
+- switch branch
+- push branch and create upstream tracking
+- create branch and push
+- merge branch into current
+- rebase current branch onto another branch
+- safe local branch deletion
+- force local branch deletion with typed confirmation
+- remote branch deletion with typed confirmation
+
+## Remote repair
+
+A repository may have:
+
+```text
+origin -> https://github.com/user/repository.git
+```
+
+even if that GitHub repository was later deleted or renamed.
+
+GithubAuto reports this as `REMOTE ERROR`.
+
+Remote Manager can:
+
+- test/fetch origin
+- create/find a GitHub repository matching the local folder name
+- replace the remote URL manually
+- remove the local remote
+
+Creating a GitHub repository requires `GITHUB_TOKEN` because normal Git cannot
+create a GitHub repository.
+
+## New repositories
+
+A plain folder under `repo/` can be initialized:
+
+```text
+repo/NewProject/
+      ↓
+git init -b main
+      ↓
+starter .gitignore
+      ↓
+optional GitHub remote creation
+      ↓
+commit selected/all files
+      ↓
+push
+```
+
+Existing repositories are **not** silently modified during scanning.
+
+## Authentication
+
+`.env`:
+
+```text
+GITHUB_TOKEN=
+GITHUB_OWNER=
+```
+
+Normal Git operations may continue using the authentication already configured
+on your Mac.
+
+The token is used for GitHub API operations such as creating or deleting remote
+repositories.
+
+## Destructive-action defaults
+
+```yaml
+safety:
+  confirm_destructive_actions: true
+  allow_remote_repo_delete: false
+  allow_hard_reset: false
+```
+
+Remote repository deletion is present in the menu but disabled by default.
+
+To intentionally enable it:
+
+```yaml
+allow_remote_repo_delete: true
+```
+
+Deletion then requires typed confirmation twice.
+
+## `.DS_Store`
+
+Scanning does not edit `.gitignore`.
+
+For existing repositories, use:
+
+```text
+Repository Manager
+→ Repository hygiene
+```
+
+when you want GithubAuto to suggest/add:
 
 ```text
 .env
 .env.*
 !.env.example
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
 ```
 
-Automatic commits also stop when changed files look like:
-
-```text
-.env
-.env.*
-*.pem
-*.key
-*.p12
-*.pfx
-id_rsa
-id_ed25519
-```
-
-## Configuration
-
-Important settings:
-
-```yaml
-github:
-  create_remote_if_missing: true
-  initialize_plain_folders: true
-  default_visibility: "private"
-  remote_name: "origin"
-
-git:
-  auto_commit: true
-  auto_pull: true
-  auto_merge: true
-  auto_push: true
-```
-
-Change `default_visibility` to `public` only when you intentionally want newly
-created repositories to be public.
-
-
-## No python-dotenv dependency
-
-GithubAuto now reads `.env` with a small standard-library loader, so
-`python-dotenv` is not required.
+This avoids creating unnecessary `.gitignore` commits across every repository.

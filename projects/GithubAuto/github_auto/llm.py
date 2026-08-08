@@ -8,31 +8,41 @@ from github_auto.config import LLMSettings
 
 class LocalLLM:
     """
-    Small wrapper around llama.cpp.
+    Use the local llama.cpp model only for commit-message language generation.
 
-    The model is used only for language tasks such as writing a commit subject.
-    Git itself remains responsible for repository state and Git operations.
+    The model never decides which Git command to execute.
     """
+
+    INVALID_OUTPUTS = {
+        "exiting",
+        "exiting...",
+        "loading model",
+        "loading model...",
+        "available commands:",
+    }
 
     def __init__(self, settings: LLMSettings) -> None:
         self.settings = settings
 
     def is_configured(self) -> bool:
-        """Return True when the configured GGUF model exists."""
         return self.settings.model_path.is_file()
 
-    def model_status(self) -> str:
-        """Return a simple model-status string for startup diagnostics."""
+    def status(self) -> str:
         if self.is_configured():
             return f"ready: {self.settings.model_path}"
         return f"not found: {self.settings.model_path}"
 
-    def create_commit_message(self, repo_name: str, diff_summary: str) -> str:
+    def create_commit_message(
+        self,
+        repo_name: str,
+        change_summary: str,
+    ) -> str:
         """
-        Generate one concise Git commit subject.
+        Generate one commit subject.
 
-        --simple-io is important when llama-cli is launched from Python.
-        --log-disable keeps runtime logs out of captured generation text.
+        `-no-cnv` is important for instruct GGUF models whose embedded chat
+        template would otherwise make llama-cli automatically enter conversation
+        mode and print interactive UI such as "Exiting...".
         """
         if not self.is_configured():
             raise RuntimeError(
@@ -40,25 +50,26 @@ class LocalLLM:
             )
 
         prompt = (
-            "Write exactly one Git commit subject.\n"
+            "Write exactly one concise Git commit subject for these changes.\n"
             "Return only the subject line.\n"
             "Maximum 72 characters.\n"
             "Use imperative wording.\n"
-            "No quotes, markdown, bullets, explanations, or prefixes.\n"
-            "Describe only the supplied changes.\n\n"
+            "Do not write markdown, quotes, explanations, or labels.\n\n"
             f"Repository: {repo_name}\n"
-            f"Changes:\n{diff_summary}\n"
+            f"Changes:\n{change_summary}\n\n"
+            "Commit subject:"
         )
 
         command = [
             self.settings.executable,
             "-m",
             str(self.settings.model_path),
+            "-no-cnv",
             "--simple-io",
             "--log-disable",
             "--no-display-prompt",
             "--no-show-timings",
-            "--single-turn",
+            "--no-warmup",
             "-n",
             str(self.settings.max_tokens),
             "--temp",
@@ -81,100 +92,137 @@ class LocalLLM:
             )
         except FileNotFoundError as exc:
             raise RuntimeError(
-                f"llama.cpp executable was not found: {self.settings.executable}"
+                f"llama.cpp executable not found: "
+                f"{self.settings.executable}"
             ) from exc
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError(
-                "The local model timed out while generating a commit message."
+                "Local model timed out while generating a commit message."
             ) from exc
 
         if result.returncode != 0:
-            error = self._short_error(result.stderr) or "Unknown llama.cpp error."
-            raise RuntimeError(f"llama.cpp failed: {error}")
+            error = self._compact(result.stderr) or "Unknown llama.cpp error."
+            raise RuntimeError(f"llama.cpp failed: {error[:500]}")
 
-        generated_text = self._extract_generated_text(
+        message = self._extract_subject(
             stdout=result.stdout,
             stderr=result.stderr,
         )
-        message = self._clean_commit_message(generated_text)
 
         if not message:
             raise RuntimeError(
-                "The local model completed but no commit subject could be captured."
+                "No valid commit subject could be captured from llama.cpp."
             )
 
         return message
 
-    @staticmethod
-    def _extract_generated_text(stdout: str, stderr: str) -> str:
+    def _extract_subject(
+        self,
+        stdout: str,
+        stderr: str,
+    ) -> str:
         """
-        Extract model text from llama.cpp output.
+        Parse only plausible generated lines.
 
-        Newer llama.cpp builds can behave differently depending on terminal /
-        subprocess IO. stdout is preferred; stderr is a defensive fallback.
+        stdout is preferred. stderr is considered only as a compatibility
+        fallback because some builds route generated output differently.
         """
-        stdout = stdout.strip()
-        if stdout:
-            return stdout
-
-        # Defensive fallback for builds that route generation differently.
-        ignored_prefixes = (
-            "loading model",
-            "available commands",
-            "/exit",
-            "/regen",
-            "/clear",
-            "/read",
-            "/glob",
-            "exiting",
-            "llama_",
-            "ggml_",
-            "main:",
-            "system_info:",
-            "build:",
-            "version:",
-        )
-
         candidates: list[str] = []
-        for raw_line in stderr.splitlines():
-            line = raw_line.strip()
-            if not line:
-                continue
 
-            lowered = line.lower()
-            if lowered.startswith(ignored_prefixes):
-                continue
-            if line.startswith(">"):
-                continue
+        for text in (stdout, stderr):
+            for raw_line in text.splitlines():
+                line = self._clean_line(raw_line)
+                if not line:
+                    continue
 
-            candidates.append(line)
+                lowered = line.lower()
+                if lowered in self.INVALID_OUTPUTS:
+                    continue
 
-        return candidates[-1] if candidates else ""
+                if lowered.startswith(
+                    (
+                        "llama_",
+                        "ggml_",
+                        "main:",
+                        "system_info:",
+                        "build:",
+                        "version:",
+                        "available commands",
+                        "/exit",
+                        "/regen",
+                        "/clear",
+                        "/read",
+                        "/glob",
+                        "loading model",
+                    )
+                ):
+                    continue
 
-    @staticmethod
-    def _clean_commit_message(text: str) -> str:
-        """Convert model output to one safe, short commit subject."""
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
-        if not lines:
+                # Reject terminal prompt echoes and our own prompt text.
+                if line.startswith(">"):
+                    continue
+                if "commit subject:" == lowered:
+                    continue
+                if lowered.startswith("repository:"):
+                    continue
+                if lowered.startswith("changes:"):
+                    continue
+
+                candidates.append(line)
+
+            if candidates:
+                break
+
+        if not candidates:
             return ""
 
-        # Prefer the final useful line because some llama.cpp builds may emit
-        # small informational lines before the generation.
-        message = lines[-1].strip("`'\" ")
+        # With -no-cnv, the generated subject should be the first useful line.
+        subject = candidates[0]
+        subject = re.sub(
+            r"^(commit message|commit subject|subject)\s*:\s*",
+            "",
+            subject,
+            flags=re.IGNORECASE,
+        )
+        subject = re.sub(r"^[-*•]\s+", "", subject).strip()
+        subject = " ".join(subject.strip("`'\" ").split())
 
-        for prefix in ("commit message:", "subject:"):
-            if message.lower().startswith(prefix):
-                message = message[len(prefix):].strip()
+        if subject.lower() in self.INVALID_OUTPUTS:
+            return ""
 
-        # Remove common markdown bullet prefixes if the model ignored prompt.
-        message = re.sub(r"^[-*•]\s+", "", message).strip()
+        if len(subject) < 3:
+            return ""
 
-        # Make sure Git receives only one line and keep the conventional limit.
-        message = " ".join(message.split())
-        return message[:72].rstrip()
+        return subject[:72].rstrip()
 
     @staticmethod
-    def _short_error(stderr: str, max_chars: int = 500) -> str:
-        """Keep command-line errors readable."""
-        text = " ".join(stderr.split())
-        return text[:max_chars]
+    def fallback_message(paths: list[str]) -> str:
+        """
+        Deterministic fallback if the model is unavailable.
+
+        A language-model failure must never force the user to stop normal Git
+        work.
+        """
+        clean_names = [
+            path
+            for path in paths
+            if not path.endswith(".DS_Store")
+        ]
+
+        if len(clean_names) == 1:
+            return f"Update {clean_names[0]}"[:72]
+
+        if 1 < len(clean_names) <= 3:
+            return (
+                "Update " + ", ".join(clean_names)
+            )[:72]
+
+        return "Update repository files"
+
+    @staticmethod
+    def _clean_line(line: str) -> str:
+        return line.strip()
+
+    @staticmethod
+    def _compact(text: str) -> str:
+        return " ".join(text.split())
